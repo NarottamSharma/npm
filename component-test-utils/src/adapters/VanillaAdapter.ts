@@ -1,15 +1,29 @@
 ﻿import { ComponentAdapter, ComponentTestResult, EventOptions } from '../types';
 
 export class VanillaAdapter implements ComponentAdapter {
-  private container: HTMLElement;
+  private container: HTMLElement | null = null;
 
   constructor() {
-    this.container = document.createElement('div');
-    this.container.setAttribute('data-testid', 'test-container');
-    document.body.appendChild(this.container);
+    // Don't create container immediately - wait until render() is called
+    // This allows the adapter to be instantiated in Node.js environments
+  }
+
+  private ensureContainer(): HTMLElement {
+    if (!this.container) {
+      if (typeof document === 'undefined') {
+        throw new Error('VanillaAdapter requires a DOM environment. Make sure you are running in a browser or have jsdom configured.');
+      }
+      this.container = document.createElement('div');
+      this.container.setAttribute('data-testid', 'test-container');
+      document.body.appendChild(this.container);
+    }
+    return this.container;
   }
 
   render(component: any, props?: any): ComponentTestResult {
+    // Ensure container is created
+    const container = this.ensureContainer();
+    
     // For vanilla JS, component can be:
     // 1. A function that returns an HTMLElement
     // 2. An HTMLElement directly
@@ -29,32 +43,35 @@ export class VanillaAdapter implements ComponentAdapter {
       throw new Error('Invalid component type for vanilla adapter');
     }
     
-    this.container.innerHTML = '';
-    this.container.appendChild(element);
+    container.innerHTML = '';
+    container.appendChild(element);
     
     return {
       element,
-      container: this.container,
+      container: container,
       rerender: (newProps?: any) => {
         if (typeof component === 'function') {
           const newElement = component(newProps);
-          this.container.innerHTML = '';
-          this.container.appendChild(newElement);
+          container.innerHTML = '';
+          container.appendChild(newElement);
         }
       },
       unmount: () => {
-        this.container.innerHTML = '';
+        container.innerHTML = '';
       },
       debug: () => {
-        console.log(this.container.innerHTML);
+        console.log(container.innerHTML);
       }
     };
   }
 
   cleanup(): void {
-    this.container.innerHTML = '';
-    if (this.container.parentNode) {
-      this.container.parentNode.removeChild(this.container);
+    if (this.container) {
+      this.container.innerHTML = '';
+      if (this.container.parentNode) {
+        this.container.parentNode.removeChild(this.container);
+      }
+      this.container = null;
     }
   }
 

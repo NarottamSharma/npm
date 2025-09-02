@@ -1,6 +1,6 @@
 {
   "name": "@narottamdev/component-test-utils",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Universal testing utilities for component libraries across different frameworks",
   "main": "dist/index.js",
   "module": "dist/index.esm.js",
